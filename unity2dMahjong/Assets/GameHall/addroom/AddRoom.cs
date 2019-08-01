@@ -15,17 +15,29 @@ namespace SC_MahJong
     {
         private Text[] inputTexts;
         private Button[] btn_nums;
-        private string roomId = "";
+        private string roomId = "";//房间号码
         private int index = 0;
         // Use this for initialization
         void Start()
         {
-            this.transform.Find("Panel/bgImage/btn_close").GetComponent<Button>().onClick.AddListener(() => {
-                this.transform.gameObject.SetActive(false);
-            });
-            BtnListener();
+            BtnCloseListener();
+            BtnNumListener();
         }
-        private void BtnListener()
+        /// <summary>
+        /// 关闭窗口按钮事件
+        /// </summary>
+        private void BtnCloseListener()
+        {
+            this.transform.Find("Panel/bgImage/btn_close").GetComponent<Button>().onClick.AddListener(() => {
+                //Destroy(this.transform.gameObject);//该句话是将此游戏对象销毁，那之后要用的话，则会报出空引用的错误，所以一般简单的关闭不要用它
+                this.transform.gameObject.SetActive(false);
+                ClearAllInput();
+            });
+        }
+        /// <summary>
+        /// 数字按钮的监听事件。
+        /// </summary>
+        private void BtnNumListener()
         {
             inputTexts = this.transform.Find("Panel/bgImage/LineContent/line2").GetComponentsInChildren<Text>();
             btn_nums = this.transform.Find("Panel/bgImage/LineContent/line3").GetComponentsInChildren<Button>();
@@ -37,19 +49,23 @@ namespace SC_MahJong
                 });
             }
         }
+        /// <summary>
+        /// 根据点击的按钮，对输入框进行赋值
+        /// </summary>
+        /// <param name="num"></param>
         private void InputRoomId(string num)
         {
             if (num.Equals("reset"))
             {
-                foreach (Text text in inputTexts)
-                {
-                    text.text = "";
-                }
-                index = 0;
+                ClearAllInput();
             }
             else if (num.Equals("del"))
             {
-                if (index > 0)  inputTexts[--index].text = "";
+                if (index > 0)
+                {
+                    inputTexts[--index].text = "";
+                    roomId = roomId.Substring(0, index);
+                }
             }
             else
             {
@@ -60,16 +76,32 @@ namespace SC_MahJong
                 {
                     //将房间号发送给服务器
                     SendRoomId(roomId);
-                    index = 0;
+                    ClearAllInput();
+
                 }
             }
         }
-
+        /// <summary>
+        /// 清空输入框中的内容
+        /// </summary>
+        private void ClearAllInput()
+        {
+            foreach (Text text in inputTexts)
+            {
+                text.text = "";
+                roomId = "";
+            }
+            index = 0;
+        }
+        /// <summary>
+        /// 向服务器发送加入房间的信息
+        /// </summary>
+        /// <param name="_roomId"></param>
         private void SendRoomId(string _roomId)
         {
             ByteBuffer buffer = ByteBuffer.CreateBufferAndType(Protocol.加入房间指令);
             buffer.writeInt(int.Parse(_roomId));
-            buffer.Send();            
+            buffer.Send();  
         }
 
         // Update is called once per frame

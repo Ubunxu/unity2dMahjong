@@ -6,9 +6,20 @@ public class DownImage : MonoBehaviour {
 
     public string imgUrl;
 	// Use this for initialization
-	void Start () {
-        StartCoroutine(down());
+  	void Start () {
+        
 	}
+    public void setImage(string img)
+    {
+        imgUrl = img;
+        StartCoroutine(down());
+    }
+    public void LoadImage(string img)
+    {
+        imgUrl = img;
+        StartCoroutine(down());
+    }
+
     private IEnumerator down()
     {
         WWW www = new WWW(imgUrl);

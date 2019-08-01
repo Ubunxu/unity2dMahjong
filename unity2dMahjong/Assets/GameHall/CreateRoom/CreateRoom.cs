@@ -28,7 +28,10 @@ namespace SC_MahJong
                 this.transform.gameObject.SetActive(false);               
 
             });
+        }
 
+        private void BtnCloseListener()
+        {
 
         }
 
@@ -43,6 +46,7 @@ namespace SC_MahJong
             Toggle[] toggle3 = transform.Find("line3/groupToggle3").GetComponentsInChildren<Toggle>();
             Toggle[] toggle4 = transform.Find("line4/groupToggle4").GetComponentsInChildren<Toggle>();
 
+            //巧妙的利用将每个toggle设置为对应的发送值（比如说：4 为4局等。。。）可以是代码简化，利用foreach
             for(int i = 0; i < toggle1.Length; ++i)
             {
                 if (toggle1[i].isOn)
@@ -126,6 +130,7 @@ namespace SC_MahJong
             buffer.Send();
         }
 
+       
         public void do8000(ByteBuffer buffer)
         {
             int roomId = buffer.readInt();

@@ -52,7 +52,15 @@ namespace SC_MahJong
         public void do1001(ByteBuffer buffer)
         {
             print("我执行了");
-            //this.transform.SendMessage
+
+            string username = buffer.readString();
+            //string userCname = buffer.readString();
+            string userCname = "徐金耀";
+            string password = buffer.readString();
+            string imageUrl = buffer.readString();
+
+            Player.GetPlayer().SetPlayerInfo(username, userCname, password, imageUrl);
+
             SceneManager.LoadScene("MyGameHall");
         }
         // Update is called once per frame

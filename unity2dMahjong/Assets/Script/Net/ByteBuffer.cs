@@ -79,6 +79,12 @@ namespace util.net
             this.writeBytes(floatbs);
         }
 
+        public void writeBoolean(bool f)
+        {
+            byte[] fs = BitConverter.GetBytes(f);
+            this.writeBytes(fs);
+        }
+
         public void writeBytes(byte[] bytes)
         {
             Array.Copy(bytes, 0, this.buffer, this.writeIndex, bytes.Length);
@@ -106,6 +112,12 @@ namespace util.net
             int value = BitConverter.ToInt32(this.buffer, this.readIndex);
             this.readIndex += 4;
             return value;
+        }
+        public bool readBoolean()
+        {
+            bool f = BitConverter.ToBoolean(this.buffer, this.readIndex);
+            this.readIndex += 1;
+            return f;
         }
 
         public string readString()
