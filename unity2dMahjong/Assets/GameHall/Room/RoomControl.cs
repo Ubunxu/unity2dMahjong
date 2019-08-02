@@ -18,6 +18,8 @@ namespace SC_MahJong
         private Dictionary<int, UserNode> userNodeDic = new Dictionary<int, UserNode>();//服务器的座位号与客户端的usernode相对应
         private RoomInfo roomInfo;
         private MyRoomView myRoom;
+        private int[] cards = new int[13];
+
         public RoomControl(MyRoomView _myRoom)
         {
             myRoom = _myRoom;
@@ -202,10 +204,24 @@ namespace SC_MahJong
         public void do8110(ByteBuffer buffer)
         {
             Debug.Log("游戏开始了");
-            
         }
 
 
+
+        /// <summary>
+        /// 服务器发牌
+        /// </summary>
+        /// <param name="buffer"></param>
+        public void do8112(ByteBuffer buffer)
+        {
+            Debug.Log("开始发牌");
+            for(int i = 0; i < 13; ++i)
+            {
+                cards[i] = buffer.readInt();
+            }
+            this.myRoom.ShowMahJong(this.myRoom.TransCard(cards));
+            this.myRoom.ShowOtherMahjong();
+        }
     }
 }
 

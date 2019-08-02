@@ -15,5 +15,7 @@ class Protocol
     public const int 把某个玩家的消息发送房间其他所有人 = 7001;
     public const int 玩家退出房间 = 7999;
     public const int 准备或取消指令 = 8006;
+    public const int 游戏开始指令 = 8110;
+    public const int 发牌指令 = 8112;
 }
 

@@ -40,7 +40,7 @@ namespace SC_MahJong
                 if (isConnection)
                 {
                     ByteBuffer buffer = ByteBuffer.CreateBufferAndType(1001);
-                    buffer.writeString("xjy1");
+                    buffer.writeString("xjy");
                     buffer.writeString("123456");
                     buffer.Send();
                 }
