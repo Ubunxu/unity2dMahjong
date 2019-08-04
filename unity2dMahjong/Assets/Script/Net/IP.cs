@@ -7,7 +7,7 @@ namespace util.net
 {
     public class IP
     {
-        public static string ip = "192.168.1.106";
+        public static string ip = "192.168.1.107";
         public static int port = 8888;
     }
 }

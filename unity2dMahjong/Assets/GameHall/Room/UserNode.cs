@@ -18,6 +18,7 @@ namespace SC_MahJong
         private string userCname;
         private string imageUrl;
         public Text txtReady;//准备或取消的名字
+        public Image readyImg;//准备标志
 
         public string Username
         {
@@ -86,26 +87,49 @@ namespace SC_MahJong
             this.transform.Find("image").GetComponent<DownImage>().LoadImage(_imageUrl);
         }
 
+        /// <summary>
+        /// 针对老版的准备显示（文字显示）的状态设置方法
+        /// </summary>
+        /// <param name="user"></param>
+        //public void SetReadyText(User user)
+        //{
+        //    if (!user.Username.Equals(Player.GetPlayer().Username))
+        //    {
+        //        if (user.UserReady == 1)
+        //        {
+        //            this.txtReady.text = "准备";
+        //        }
+        //        else if(user.UserReady==-1)
+        //        {
+        //            this.txtReady.text = "取消";
+        //        }
+        //    }
+        //}
 
-        public void SetReadyText(User user)
+        public void SetReadyImg(int userReady)
         {
-            if (!user.Username.Equals(Player.GetPlayer().Username))
+            if (userReady == 1)
             {
-                if (user.UserReady == 1)
-                {
-                    this.txtReady.text = "准备";
-                }
-                else if(user.UserReady==-1)
-                {
-                    this.txtReady.text = "取消";
-                }
+                this.readyImg.gameObject.SetActive(true);
+                //Button button = this.transform.Find("btn_Ready").GetComponent<Button>();
+                //if ( this.transform.Find("btn_Ready").GetComponent<Button>() != null)
+                //{
+                //    button.gameObject.SetActive(false);
+                //}
+            }
+            else if (userReady == -1)
+            {
+                this.readyImg.gameObject.SetActive(false);
             }
         }
         public void ClearUserInfo()
         {
             this.SetUserCname("xxxx");
             this.SetUserImageUrl("null");
-            this.txtReady.text = "取消";
+            //准备和取消设置（老版的）
+            //this.txtReady.text = "取消";
+            //准备和取消设置（新版的）
+            this.SetReadyImg(-1);
         }
         // Use this for initialization
         void Start()

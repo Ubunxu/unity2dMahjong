@@ -83,8 +83,11 @@ namespace SC_MahJong
                 UserNode userNode = userNodeDic[user.Postion];
                 userNode.SetUserCname(user.UserCname);
                 userNode.SetUserImageUrl(user.UserImage);
-                //设置玩家的状态
-                userNode.SetReadyText(user);
+                //设置玩家的状态(老版的)
+                //userNode.SetReadyText(user);
+                //设置玩家的状态(新版的)
+                userNode.SetReadyImg(user.UserReady);
+
                 userNode.Postion = user.Postion;
                 userNode.Username = user.Username;
             }
@@ -140,7 +143,10 @@ namespace SC_MahJong
             UserNode userNode = userNodeDic[posation];
             userNode.SetUserCname(userCname);
             userNode.SetUserImageUrl(userImage);
-            userNode.SetReadyText(user);
+            //设置玩家的状态(老版的)
+            //userNode.SetReadyText(user);
+            //设置玩家的状态(老版的)
+            userNode.SetReadyImg(user.UserReady);
 
         }
         /// <summary>
@@ -162,13 +168,18 @@ namespace SC_MahJong
         /// <param name="buffer"></param>
         public void do8006(ByteBuffer buffer)
         {
-
             string username = buffer.readString();
             int isReady = buffer.readInt();
             int position = buffer.readInt();
 
             UserNode userNode = userNodeDic[position];
+            ////准备和取消设置（新版的）
+            userNode.SetReadyImg(isReady);
+            this.myRoom.isClick = false;
 
+            //准备和取消设置（老版的）
+          
+            /*
             if (username.Equals(Player.GetPlayer().Username))
             {
                 
@@ -194,6 +205,8 @@ namespace SC_MahJong
                 }
 
             }
+            */
+
 
         }
 
@@ -219,8 +232,7 @@ namespace SC_MahJong
             {
                 cards[i] = buffer.readInt();
             }
-            this.myRoom.ShowMahJong(this.myRoom.TransCard(cards));
-            this.myRoom.ShowOtherMahjong();
+            this.myRoom.ShowMahJong(this.myRoom.TransCard(this.myRoom.SortCard(cards)));
         }
     }
 }
