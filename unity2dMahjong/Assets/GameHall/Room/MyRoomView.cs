@@ -25,6 +25,7 @@ namespace SC_MahJong
         public Text btnText;//按钮名字
         public bool isClick = false;//是否点击了
         public Dictionary<string, Sprite> mjSpriteDic = new Dictionary<string, Sprite>();
+
         private void Awake()
         {
             new RoomControl(this);
@@ -32,7 +33,7 @@ namespace SC_MahJong
         // Use this for initialization
         void Start()
         {
-            U3DSocket.shareSocket().StartRead();
+            //U3DSocket.shareSocket().StartRead();
             //房间退出按钮
             this.transform.Find("Panel/top/top_sets/btn_exit").GetComponent<Button>().onClick.AddListener(()=> {
                 //先发送退出房间指令
@@ -89,8 +90,8 @@ namespace SC_MahJong
             });
 
 
-            //int[] cards = { 11, 12, 16, 17, 18, 19, 21, 22, 13, 14, 15, 23, 24 };
-            //this.ShowMahJong(TransCard(SortCard(cards)));
+            int[] cards = { 11, 12, 16, 17, 18, 19, 21, 22, 13, 14, 15, 23, 24 };
+            this.ShowMahJong(TransCard(SortCard(cards)));
         }
         /// <summary>
         /// 对牌进行排序之冒泡排序
@@ -184,9 +185,25 @@ namespace SC_MahJong
             (mjObj.transform as RectTransform).anchoredPosition = new Vector2(61.5f + 123 * i, -92.5f);
             mjObj.transform.GetComponent<Image>().sprite = mjSpriteDic[cards[i]];
 
+            Button cardBtn = mjObj.transform.GetComponent<Button>();
+            cardBtn.onClick.AddListener(() =>
+            {
+                print("点击监听事件");
+                mjObj.transform.GetComponent<CardClickListener>().Move();
+            });
+
+
+
+
+
+
+
+
+
+
             //=========================测试打牌的排版=======================
 
-             GameObject mjObj2 = Instantiate(Resources.Load("DMahjong0")) as GameObject;
+            GameObject mjObj2 = Instantiate(Resources.Load("DMahjong0")) as GameObject;
             mjObj2.transform.SetParent(GameObject.Find("Panel/bottom/sendMahjong").transform, false);
 
             //(mjObj2.transform as RectTransform).anchoredPosition = new Vector2(-247.5f + 55 * i, 42f);
@@ -211,12 +228,6 @@ namespace SC_MahJong
             mjObj5.transform.GetComponent<Image>().sprite = mjSpriteDic[cards[i].Replace('b', 's').Replace("p4", "p1")];
 
             
-
-
-
-
-
-
         }
 
         private void OthersClone(int i)

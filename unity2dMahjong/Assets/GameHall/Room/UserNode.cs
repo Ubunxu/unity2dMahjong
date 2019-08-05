@@ -106,16 +106,20 @@ namespace SC_MahJong
         //    }
         //}
 
-        public void SetReadyImg(int userReady)
+        public void SetReadyImg(int userReady,string username="")
         {
             if (userReady == 1)
             {
                 this.readyImg.gameObject.SetActive(true);
-                //Button button = this.transform.Find("btn_Ready").GetComponent<Button>();
-                //if ( this.transform.Find("btn_Ready").GetComponent<Button>() != null)
-                //{
-                //    button.gameObject.SetActive(false);
-                //}
+                if (username.Equals(Player.GetPlayer().Username))
+                {
+                    Button button = this.transform.Find("btn_Ready").GetComponent<Button>();
+                    if (this.transform.Find("btn_Ready").GetComponent<Button>() != null)
+                    {
+                        button.gameObject.SetActive(false);
+                    }
+                }
+
             }
             else if (userReady == -1)
             {

@@ -174,7 +174,7 @@ namespace SC_MahJong
 
             UserNode userNode = userNodeDic[position];
             ////准备和取消设置（新版的）
-            userNode.SetReadyImg(isReady);
+            userNode.SetReadyImg(isReady,username);
             this.myRoom.isClick = false;
 
             //准备和取消设置（老版的）
