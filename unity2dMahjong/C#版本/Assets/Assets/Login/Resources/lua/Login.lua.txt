@@ -1,0 +1,38 @@
+--登录类
+
+Login = {}
+local this = Login
+
+this.Start = function()
+    CS.EventTriggerListener.Get(this.self.gameObject).onClick = function
+    ()
+        CS.util.Http.doGet(CS.util.net.IP.HttpServer.."?type=1001&userName=xjy&password=123456",this.self, function(str)
+            str = string.sub(str,4)
+            print(str)
+            local json = CS.util.JsonDataLua.Parse(str)
+            local value = json:getString('flg')
+            if(value=='ok') then
+                local userName = json:getString('userName')
+                local chinaName = json:getString('chinaName')
+                local imgUrl = json:getString('imgUrl')
+                local money = json:getInt('money')
+                print(userName,chinaName)
+                CS.SC_MahJong.Player.GetPlayer():SetPlayerInfo(userName,chinaName,'',money,imgUrl)
+                print('连接成功！')
+                --跳转
+                CS.UnityEngine.SceneManagement.SceneManager.LoadScene('MyGameHall')
+            else
+                print('连接失败：'..value)
+            end
+        end)
+    end
+end
+
+
+this.OnDestroy = function()
+
+end
+
+
+
+

@@ -1,0 +1,96 @@
+--[[
+创建方法的类
+]]
+local UI = CS.UnityEngine.UI
+local JsonData = CS.util.JsonDataLua
+
+CreateRoom = {}
+local this = CreateRoom
+
+this.Start = function()
+    --注册消息
+    CS.util.LuaEventDispatcher.addEventLinstener(this,'do')
+    --添加协议方法操作
+    this.MyEventListener()
+end
+
+--监听事件（可以使用EventTriggerListener）
+this.MyEventListener = function()
+    this.transform:Find('Panel/bgImage/contentPanel/line6/btn_createRoom'):GetComponent(typeof(UI.Button)).onClick:AddListener(function()
+        local jsonStr = this.GetCreateRoomData()
+        --开启Socket连接
+        this.StartTcp(jsonStr)
+    end)
+    this.transform:Find('Panel/bgImage/closeButt1'):GetComponent(typeof(UI.Button)).onClick:AddListener(function()
+        this.transform.gameObject:SetActive(true)
+    end)
+end
+
+this.StartTcp  = function(_jsonStr)
+    local socket = CS.util.net.U3DSocket.shareSocket()
+    socket:ConnectTo(CS.util.net.IP.ip,CS.util.net.IP.port, function(flg)
+        if(flg=='1') then
+            print('连接成功')
+            local buffer =CS.util.net.ByteBuffer.CreateBufferAndType(8000)
+            buffer:writeString(CS.SC_MahJong.Player.GetPlayer().Username)
+            buffer:writeString(_jsonStr)
+            buffer:Send()
+        else
+            print('正在连接服务器')
+        end
+
+    end,function (str)
+        print('连接失败:'..str)
+    end,10)
+end
+
+--获取创建房间的数据
+this.GetCreateRoomData=function()
+--[[ selectJS   wf   dqhsz  fs   ]]
+    local selectJS = 4
+    local wf=1
+    local dqhsz = ''
+    local fs = 6
+
+    local tran = this.transform:Find('Panel/bgImage/contentPanel')
+    local toggle1 = tran:Find('line1/groupToggle'):GetComponentsInChildren(typeof(UI.Toggle))
+    --local toggle1 = tran:Find('line1/groupToggle'):GetComponentsInChildren("Toggle")
+    local toggle2 = tran:Find('line2/groupToggle2'):GetComponentsInChildren(typeof(UI.Toggle))
+    local toggle3 = tran:Find('line3/groupToggle3'):GetComponentsInChildren(typeof(UI.Toggle))
+    local toggle4 = tran:Find('line4/groupToggle4'):GetComponentsInChildren(typeof(UI.Toggle))
+
+    for i = 0, toggle1.Length-1 do
+        if (toggle1[i].isOn) then
+            selectJS = tonumber(toggle1[i].name)
+        end
+    end
+    for i = 0, toggle2.Length-1 do
+        if (toggle2[i].isOn) then
+            wf = tonumber(toggle2[i].name)
+        end
+    end
+    for i = 0, toggle3.Length-1 do
+        if(toggle3[0].isOn and toggle3[1].isOn) then
+            dqhsz='dq#hsz'
+            break
+        else
+            dqhsz = tostring(toggle3[i].name)
+        end
+    end
+    for i = 0, toggle4.Length-1 do
+        if (toggle4[i].isOn) then
+            fs= tonumber(toggle4[i].name)
+        end
+    end
+
+    print(selectJS,wf,dqhsz,fs)
+    local data = JsonData()
+    data:Add('selectJS', selectJS)
+    data:Add('wf',wf)
+    data:Add('dqhsz',dqhsz)
+    data:Add('fs',fs)
+    print(data:ToJson())
+    --local jsonStr = "{"+"\"selectJS\""+":"+selectJS+","+"\"wf\""+":"+wf+","+"\"dqhsz\""+":"+dqhsz+","+"\"fs\""+":"+fs+"}"
+    return data:ToJson()
+end
+

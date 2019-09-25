@@ -1,0 +1,119 @@
+require("List");
+
+Dictionary = {}
+
+--创建对象的方法
+function Dictionary:New()
+  --obj = obj or {}; -- 如果obj没有传参数，是个空，那么就新建一张空表
+  obj = obj == nil and obj or {}; --这句话，比上面那么话要保险，因为括号可以不传参数
+
+  --local tb = {};
+  setmetatable(obj, tb);-- 设置元表，设置表结构，这是格式,self:表示一个新的this指针
+  self.__index = self; --如果obj是空，那就么创建一个新的self指针
+  --tb.__newIndex =
+  return obj;
+end
+
+--添加变长参数
+function Dictionary:add(key,value)
+
+	self[key] = value;
+
+end
+
+
+--删除指定的值，通过键
+function Dictionary:Remove(key)
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		if(k==value) then
+			self[k] = nil;--把值赋为空,就会删除
+			break;
+		end
+	end
+end
+
+--判断指定的值在不在数组中 返回一个bool
+function Dictionary:ContanisKey(key)
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		if(k==value) then
+			return true;
+		end
+	end
+	return false;
+end
+
+--查找指定的值第一次出现的位置
+function Dictionary:Keys()
+	local list = List:New();
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		list:addValue(k);
+	end
+	return list;
+end
+
+--查找指定的值第一次出现的位置
+function Dictionary:Values()
+	local list = List:New();
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		list:addValue(v);
+	end
+	return list;
+end
+
+--查找指定的值第一次出现的位置
+function Dictionary:KeysAndValues()
+	local keys = List:New();
+	local values = List:New();
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		keys:addValue(k);
+		values:addValue(v);
+	end
+	return keys,values;
+end
+
+function Dictionary:Clear()
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		self[k] = nil;
+	end
+end
+
+function Dictionary:show()
+	for k,v in pairs(self) do --self：表示当前自己这张表
+		print(k,v);
+	end
+end
+
+--测试
+
+local dict = Dictionary:New();
+local dict2 = Dictionary:New();
+dict2:add("name","zwj");
+
+dict:add("name","lili");
+dict:add("sex","男");
+dict:add("sex","女");
+dict.age = 10;
+--dict:Clear();
+--dict:show();
+local keys2 = dict:Keys();
+
+local keys,values = dict:KeysAndValues();
+keys:show();
+values:show();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

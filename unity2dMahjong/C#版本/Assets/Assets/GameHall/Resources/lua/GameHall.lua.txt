@@ -1,0 +1,33 @@
+
+GameHall = {}
+local this = GameHall
+
+this.Start = function()
+    --添加协议方法的操作
+
+    this.ShowUserInfo()
+    this.MyEventListener()
+end
+
+--在大厅显示玩家的基本信息
+this.ShowUserInfo=function ()
+    local txt_username = CS.UnityEngine.GameObject.Find('Panel/top/txt_username'):GetComponent(typeof(CS.UnityEngine.UI.Text))
+    local txt_money = CS.UnityEngine.GameObject.Find('Panel/top/moneyImage/txt_money'):GetComponent(typeof(CS.UnityEngine.UI.Text))
+    local headImage = CS.UnityEngine.GameObject.Find('Panel/top/head/circle/headImage'):GetComponent(typeof(CS.UnityEngine.UI.RawImage))
+
+    txt_username.text = CS.SC_MahJong.Player.GetPlayer().UserCname
+    txt_money.text = CS.SC_MahJong.Player.GetPlayer().Money
+    headImage:GetComponent(typeof(CS.DownImage)):LoadImage(CS.SC_MahJong.Player.GetPlayer().UserImage)
+
+end
+
+--大厅内的要的监听事件
+this.MyEventListener = function()
+    this.transform:Find('Panel/left/joinRoomButt'):GetComponent(typeof(CS.UnityEngine.UI.Button)).onClick:AddListener(function()
+          this.transform:Find('AddRoom').gameObject:SetActive(true)
+    end)
+     this.transform:Find('Panel/left/createRoomButt'):GetComponent(typeof(CS.UnityEngine.UI.Button)).onClick:AddListener(function()
+          this.transform:Find('CreateRoom').gameObject:SetActive(true)
+    end)
+end
+
