@@ -1,0 +1,107 @@
+
+local ByteBuffer=CS.util.net.ByteBuffer;
+
+local UI=CS.UnityEngine.UI;
+local JsonData=CS.util.JsonDataLua;
+local EncryptDecrypt=CS.util.net.EncryptDecrypt;
+CreateRoom={};
+
+CreateRoom.Start=function()
+	SendButtonOnclick();
+	Close();
+end
+
+function SendButtonOnclick()
+	CS.EventTriggerListener.Get(CreateRoom.transform:Find("bg/Center/Line6/Button").gameObject).onClick=function(obj)
+		SendCreateRoom();
+	end
+end
+
+function SendCreateRoom()
+            local ss = false; -- 判断是否已经选了定缺的情况
+            local s = "";
+            local isAdd = true;
+			local wf=1;
+			local js=4;
+			local dqhsz="";
+			local fs=6;
+            
+            local toggl=CreateRoom.transform:GetComponentsInChildren(typeof(UI.Toggle));
+            --遍历数组
+			for i=0,toggl.Length-1,1 do
+                if(toggl[i].isOn)
+                then
+                    --因为是按照顺序来的，所以第0个也就是创建房间的第一个选择（4局），如果被选中，就把4写进去
+                    if (i == 0) 
+					then
+						js=4;
+					end
+                    --同理，第一个就是（8局），被选中就写8进去
+                    if (i == 1)then js=8;end
+                    if (i == 2)then	js=16;end
+                    if (i == 3)then	js=24;end
+                    if (i == 4)then	wf=1;end
+                    if (i == 5)then	wf=2;end
+                    if (i == 6)then	wf=3;end
+                    --第7和8比较特殊，是可以多选单选或者不选的，当7被选中就把“定缺”保存起来，同时告诉把ss（告诉后面，我勾了7）变成true
+                    if (i == 7)then
+                        s =s.. "dq";
+                        ss = true;
+                    end
+                    if (i == 8)then
+                        --如果选择了8，这里就会进来，在“定缺”的基础上在加上“#hsz”
+                        if (ss) 
+						then
+							s =s.. "#hsz";
+						
+                        else s=s.."hsz";
+						end
+                        --如果没有选择7，就会进这里，只保存“换三证”就好
+                    end
+                    --如果大于等于8，并且没有上传的时候，就把之前保存的s上传，就是“dq”或者“hsz”或者“dq#hsz”
+                    if (i >= 8 and isAdd)then
+                        dqhsz=s;
+                        isAdd = false;
+                    end
+                    if (i == 9)then	fs=6;end
+                    if (i == 10)then	fs=8;end
+                    if (i == 11)then	fs=0;end
+                end
+            end
+            --这一段是打印给你自己看的，在不确定上传的是正确的时候，先自己打印看看，把send注释掉
+				
+				local Json =JsonData();
+				Json:Add("selectJS",js);
+				Json:Add("wf",wf);
+				Json:Add("fs",fs);
+				Json:Add("dqhsz",dqhsz);
+	
+				TcpSocket(Json:ToJson());
+end
+
+function TcpSocket(jsonStr)
+	
+	local socket= CS.util.net.U3DSocket.shareSocket();
+		socket:ConnectTo(CS.util.net.IP.ip, CS.util.net.IP.port,function(str)
+			--print(str=="1");
+			if(str=="1") then
+				local bu = ByteBuffer.CreateBufferAndType(8000);
+				bu:writeString(CS.Player.SharPlayer().UName);
+				bu:writeString(jsonStr);
+				bu:Send(EncryptDecrypt.defaultKey);
+				--print(CS.Player.SharPlayer().play.UName,"发送创建信息");
+			end
+		end, function(str)
+                print("连接失败");
+            end);
+end
+
+
+function Close()
+	CS.EventTriggerListener.Get(CreateRoom.transform:Find("bg/but_Close").gameObject).onClick=function(obj)
+		--CreateRoom.self.gameObject:SetActive(false);
+		print('>>>>>>>>>'..'关闭创建房间');
+		CS.UnityEngine.Object.DestroyObject(CreateRoom.transform.gameObject);
+	end
+end		
+			

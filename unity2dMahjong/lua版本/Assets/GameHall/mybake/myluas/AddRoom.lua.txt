@@ -1,0 +1,82 @@
+
+local ByteBuffer=CS.util.net.ByteBuffer;
+local Input = CS.UnityEngine.Input;
+local EncryptDecrypt=CS.util.net.EncryptDecrypt;
+local UI=CS.UnityEngine.UI;
+local nubKK=nil;
+local index=0;
+AddRoom={};
+
+AddRoom.Start=function()
+
+	btnOnClick();
+	Close();
+	nubKK = AddRoom.transform:Find("Center/Line2"):GetComponentsInChildren(typeof(UI.Text));
+end
+
+function btnOnClick()
+	local btn= AddRoom.transform:Find("Center"):GetComponentsInChildren(typeof(UI.Button));
+	print(btn.Length);
+	for i=0,btn.Length-1,1 do
+		-- 使用这个方法可以避免出现按钮监听事件中的i最后全是退出循环的那个值
+		CS.EventTriggerListener.Get(btn[i].gameObject).onClick=function(obj)
+			numberDisplay(btn[i].name);
+		end
+	end
+		
+end
+function numberDisplay(str)
+	if(str=="delet")
+	then 
+		if (index == 0)then  return; end
+		nubKK[index-1].text = "";
+		index=index-1;
+		return;
+	end
+	if (index <= 5)
+	then
+		nubKK[index].text = str;	
+		index=index+1;
+	end
+	if (index == 6)
+	then
+		local roomId = "";
+		for j=0,nubKK.Length-1,1 do 
+			roomId =roomId..(nubKK[j].text);
+			nubKK[j].text = "";
+		end
+		
+		sendRoomId(roomId);
+		
+	end
+end
+
+function sendRoomId(roomId)
+
+	local socket= CS.util.net.U3DSocket.shareSocket();
+		socket:ConnectTo(CS.util.net.IP.ip, CS.util.net.IP.port,function(str)
+			--print(str=="1");
+			if(str=="1") then
+				local bu = ByteBuffer.CreateBufferAndType(8001);
+				 bu:writeString(CS.Player.SharPlayer().UName);
+				 bu:writeInt(tonumber(roomId));
+				 bu:Send(EncryptDecrypt.defaultKey);
+				 index = 0;
+			end
+		end, function(str)
+                print("连接失败");
+            end); 
+end
+
+
+function Close()
+	CS.EventTriggerListener.Get(AddRoom.transform:Find("bg/but_Close").gameObject).onClick=function(obj)
+		--AddRoom.self.gameObject:SetActive(false);
+		print('>>>>>>>'..'关闭加入房间');
+		CS.UnityEngine.Object.DestroyObject(AddRoom.transform.gameObject);
+	end
+end
+
+AddRoom.Update=function()
+	
+end

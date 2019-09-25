@@ -1,0 +1,112 @@
+local List = {};
+--创建对象的方法
+function List:New()
+  --obj = obj or {}; -- 如果obj没有传参数，是个空，那么就新建一张空表
+  obj = obj == nil and obj or {}; --这句话，比上面那么话要保险，因为括号可以不传参数
+  setmetatable(obj, self);-- 设置元表，设置表结构，这是格式,self:表示一个新的this指针
+  self.__index = self; --如果obj是空，那就么创建一个新的self指针
+  return obj;
+end
+
+--添加变长参数
+function List:add(...)
+	local value = {...};
+	for k,v in ipairs(value) do
+		self[#self+1] = v;
+	end
+end
+
+function List:addValue(value)
+	self[#self+1] = value;
+end
+
+--在指定位置处插入一个值
+function List:addAt(index,value)
+	table.insert(self,index,value);
+end
+
+--删除指定的值
+function List:Remove(value)
+	for k,v in ipairs(self) do --self：表示当前自己这张表
+		if(v==value) then
+			table.remove(self,k);
+			break;
+		end
+	end
+end
+
+--删除指定下标的值
+function List:RemoveAt(value)
+	local len = #self;
+	--做一下简单的判断,也可以不写
+	if(value<1 or value>len) then return; end
+	if(type(value)~="number") then return; end;--如果传入的参数不是数字
+	for k,v in ipairs(self) do --self：表示当前自己这张表
+		if(k==value) then
+			table.remove(self,k);
+			break;
+		end
+	end
+end
+
+--判断指定的值在不在数组中 返回一个bool
+function List:Contanis(value)
+	for k,v in ipairs(self) do --self：表示当前自己这张表
+		if(v==value) then
+			return true;
+		end
+	end
+	return false;
+end
+
+--查找指定的值第一次出现的位置
+function List:IndexOf(value,index)
+	local i = index or 1;--如果index没有传参数,就把1赋值给i
+	local len = #self;
+	for j=i,len,1 do
+		if(self[j]==value) then
+			return j;
+		end
+	end
+	return -1;
+end
+
+--查找指定的值最后一次出现的位置
+function List:LastIndexOf(value)
+	local len = #self;
+	for j=len,1,-1 do
+		if(self[j]==value) then
+			return j;
+		end
+	end
+	return -1;
+end
+
+function List:show()
+	for k,v in ipairs(self) do --self：表示当前自己这张表
+		print(k,v);
+	end
+end
+
+function List:Sort()
+	table.sort(self);
+end
+
+return List;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

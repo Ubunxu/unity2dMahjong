@@ -1,0 +1,55 @@
+
+local List=require("xlua/List");
+
+local RoomInfo={};
+
+RoomInfo.roomId = 0;
+
+RoomInfo.gameCount = 0;
+
+RoomInfo.gamePlayer = 0;
+
+RoomInfo.dqHsz = nil;
+
+RoomInfo.Fs = 0;
+
+RoomInfo.myPos = 0;
+
+local userList=List:New();
+--添加用户
+RoomInfo.addUser=function(user)
+	userList:addValue(user);
+	print("添加用户");
+	if(user.UName==CS.Player.SharPlayer().UName)
+	then
+		RoomInfo.myPos = user.Pos;
+		
+	end
+end
+--删除用户
+RoomInfo.removeUser=function(userName)
+	for k,v in ipairs(userList) do
+		if(v.userName==userName)
+		then
+			userList:Remove(v);
+		end
+	end
+end
+
+--获得某个用户
+RoomInfo.GetUser=function(userName)
+	for k,v in ipairs(userList) do
+		if(v.userName==userName)
+		then
+			return v;
+		end
+	end
+end
+
+--获得所有用户
+
+RoomInfo.GetUsers=function()
+	return userList;
+end
+
+return RoomInfo;

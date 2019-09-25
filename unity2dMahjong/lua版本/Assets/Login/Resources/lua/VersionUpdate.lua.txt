@@ -1,0 +1,95 @@
+--[[
+  版本更新
+--]]
+VersionUpdate = {};
+
+local this = VersionUpdate;
+local PlayerPrefs = CS.UnityEngine.PlayerPrefs;
+local IP = CS.util.net.IP;
+local JsonData = CS.util.JsonDataLua;
+local loadType = CS.util.loadType;
+local currentVersion = 2.0;
+local updateVersion;
+local versionFileName = 'version.json';
+
+this.Awake = function()
+    --PlayerPrefs.SetString('myname','xujinyao11')
+    if (PlayerPrefs.GetFloat('version')==0) then
+        print('初始化版本号');
+        PlayerPrefs.SetFloat('version', currentVersion);
+    end
+    currentVersion = PlayerPrefs.GetFloat('version');
+    print('版本号为： '..currentVersion);
+    --print('>>>>>>>>>>>>>>>>我的名字是'..PlayerPrefs.GetString('myname'));
+end
+
+this.Start = function()
+    local downJsonPath = IP.httpIp ..'/'.. versionFileName;
+    print('>>>>>>>>>>>>>>>> '..downJsonPath);
+    CS.util.LoadFactory.LoadAssetText(downJsonPath, this.self, function(jsonStr)
+        print('>>>'..jsonStr)
+        local data = JsonData.Parse(jsonStr);
+        updateVersion = data:getDouble('version');  -- 目前是数值类型的版本号
+        local files = data:getArray('files');
+        if (tonumber(currentVersion) ~= updateVersion) then
+            this.UpdateFile(files);
+        else
+            this.UpdateOver(currentVersion, false);
+        end
+    end, false);
+end
+
+this.UpdateFile = function(_files)
+    this.transform:GetComponent('Text').text = '正在加载更新资源，请不要退出!!!'
+    this.NextLoad(0, _files);
+
+end
+
+this.NextLoad = function(index, _data)
+    local leng = _data.Length;
+    print('>>>>>>>>leng='..leng);
+    if (index < leng) then
+        local fileType = _data[index]:getString('type');
+        local serverDownpath = _data[index]:getString('serverDownpath');
+        local jsonVersion = _data[index]:getDouble('version');
+        local filename = _data[index]:getString('name');
+        local fileExt = _data[index]:getString('ext');
+        local loadfile = filename .. fileExt;
+        local loadFilesPath = IP.httpIp .. '/' .. serverDownpath .. '/' .. loadfile;
+        local typeOfEnum = CS.System.Enum.Parse(typeof(loadType), fileType);
+
+        CS.util.LoadFactory.LoadAsset(loadFilesPath, this.self, function(obj, _bytes)
+            local clientSavepath = _data[index]:getString('clientSavepath');
+            local savepath = CS.LuaCallUnity.ApplicationDatapath() .. '/' .. clientSavepath .. '/' .. loadfile;
+
+            CS.LuaCallUnity.WriteFileByBytes(savepath, _bytes);
+            index = index + 1;
+            this.NextLoad(index, _data);
+        end, false, typeOfEnum);
+    else
+        -- 加载完成
+        print('加载完成了');
+        -- 赋值版本号
+        --PlayerPrefs.SetFloat('version',updateVersion);
+        this.UpdateOver(updateVersion, true);
+    end
+
+end
+
+this.UpdateOver = function(_versionStr, isUpdate)
+    local loginBtn = this.transform.parent.transform:Find('But_WeiXin').gameObject;
+    local exitBtn = this.transform.parent.transform:Find('btn_exit').gameObject;
+    local updateTips = this.transform:GetComponent('Text');
+    loginBtn:SetActive(true);
+    exitBtn:SetActive(true);
+    if (isUpdate) then
+        updateTips.text = '更新完成,当前版本号:' .. _versionStr;
+    else
+        updateTips.text = '当前是最新版本,版本号:'.._versionStr;
+    end
+end
+
+
+
+
+

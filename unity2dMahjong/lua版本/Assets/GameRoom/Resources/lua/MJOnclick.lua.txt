@@ -1,0 +1,83 @@
+
+local Resources=CS.UnityEngine.Resources;
+local ByteBuffer=CS.util.net.ByteBuffer;
+local GameObject=CS.UnityEngine.GameObject;
+local Object=CS.UnityEngine.Object;
+
+
+MJOnclick={}
+local this = MJOnclick;
+local SendMJParent;
+local AllMJImg;
+this.Start=function()
+
+	AllMJImg={};
+
+	local mjs =Resources.LoadAll("MJImage");
+
+	for i=0,mjs.Length-1,1 do
+		AllMJImg[mjs[i].name]=mjs[i];
+	end
+	-- 为了使摸的牌和列牌都可以点击打出而设置的，通过找到父对象的父对象然后找到统一的打牌区
+	SendMJParent=this.transform.parent.parent:Find("MJDesk/My_SendMJ");
+
+	this.Onclick();  -- 开启点击监听事件
+end
+this.Onclick = function()
+
+	CS.EventTriggerListener.Get(this.transform.gameObject).onClick=function(obj)
+
+		local Hor=this.transform.parent:GetComponent("HorizontalLayoutGroup");
+		-- 控制布局开关
+		if(Hor.enabled)
+		then
+
+			Hor.enabled = false;
+
+			this.transform.position=this.transform.position+ (CS.UnityEngine.Vector3(0, 70, 0));
+		else
+			-- 遍历所有的列牌，然后根据麻将的y的坐标进行判断是否点击了同一张牌
+			for k,v in pairs(this.transform.parent) do
+
+				if(v.position.y>113)
+				then
+
+					if(v.position==this.transform.position)
+					then
+						
+						v:DOMove(SendMJParent.position,0.7):OnComplete(function()
+							
+							local bu = ByteBuffer.CreateBufferAndType(8116);
+							local sss= v:GetComponent("Image").sprite.name;
+							
+							--p4b1_9
+							local s1=string.sub(sss,4,4);
+							local s2=string.sub(sss,6,6);
+							
+							local s3=tonumber(s1..s2);
+							
+							bu:writeInt(s3);
+							
+							bu:Send();
+							
+							this.transform.parent=SendMJParent;	
+							local str=string.sub(sss,1,2);
+							local str1=string.sub(sss,4);
+							local name=str.."s"..str1;	
+							this.transform:GetComponent("RectTransform").sizeDelta = CS.UnityEngine.Vector2(55,84);	
+							this.transform:GetComponent("Image").sprite=AllMJImg[name];
+							this.transform.localScale = CS.UnityEngine.Vector3(1,1,1);
+							Hor.enabled = true;		
+						end
+						);
+						
+						
+					end
+					v.position=v.position+ (CS.UnityEngine.Vector3(0, -70, 0));
+				end
+			end
+
+			this.transform.position=this.transform.position+ (CS.UnityEngine.Vector3(0, 70, 0));
+		end
+	end
+end

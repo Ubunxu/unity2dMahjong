@@ -1,0 +1,18 @@
+
+local User={};
+
+
+function User:New(name,cName,imgurl,ready,pos)
+	local obj ={};
+	setmetatable(obj, self);-- 设置元表，设置表结构，这是格式,self:表示一个新的this指针
+	self.__index = self; --如果obj是空，那就么创建一个新的self指针
+	obj.uName=name;
+	obj.cName=cName;
+	obj.image=imgurl;
+	obj.ready=ready;
+	obj.pos = pos;
+  return obj;
+end
+
+
+return User;

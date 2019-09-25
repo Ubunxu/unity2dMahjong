@@ -1,0 +1,799 @@
+local roomInfo=require("lua/RoomInfo");
+local User=require("lua/User");
+local List=require("xlua/List");
+
+local Resources=CS.UnityEngine.Resources;
+local ByteBuffer=CS.util.net.ByteBuffer;
+local Object=CS.UnityEngine.Object;
+local UI=CS.UnityEngine.UI;
+local JsonData=CS.util.JsonDataLua;
+local RoomInfo=nil;
+local desk={};
+local dic={};   -- 保存desknode的信息
+local ZuoWei={};
+local AllMJImg={};   -- 保存所有的麻将的牌面的图片
+local ss=false;-- 判断是否点击了准备服务器还没回消息又继续点
+local Peng=nil;--碰按钮
+local Gang=nil;--杠按钮
+local Hu = nil; -- 胡按钮
+local Guo = nil;-- 过按钮
+local PengUser;   -- 被碰的玩家
+local CardNum=-1;    -- 记录碰杠听的麻将编号
+local ZhuangjiaName=nil  -- 确定庄家的名字
+local isGuo = false;  -- 在有过的时候选择了过，用此变量进行标记
+local MJList=List:New();--收到的麻将牌
+
+local LeftSend;
+local TopSend;
+local RightSend;
+
+
+GameRoom={};
+
+GameRoom.Start =function()
+
+	--获得左右和上家打出去的牌的父对象
+	LeftSend=GameRoom.transform:Find("Panel/MJDesk/Left_SendMJ");
+	TopSend=GameRoom.transform:Find("Panel/MJDesk/Top_SendMJ");
+	RightSend=GameRoom.transform:Find("Panel/MJDesk/Right_SendMJ");
+	
+	CS.util.core.EventDispatch.addLuaEventListener(GameRoom); -- 注册lua文件里面的协议方法
+	local socket= CS.util.net.U3DSocket.shareSocket();
+	desk[0]=GameRoom.transform:Find("Panel/my_User"):GetComponent(typeof(CS.LuaRun));
+	desk[1]=GameRoom.transform:Find("Panel/left_User"):GetComponent(typeof(CS.LuaRun));
+	desk[2]=GameRoom.transform:Find("Panel/top_User"):GetComponent(typeof(CS.LuaRun));
+	desk[3]=GameRoom.transform:Find("Panel/Right_User"):GetComponent(typeof(CS.LuaRun));
+	--开启读取
+	socket:StartRead();
+	addMJToList();
+	--添加点击事件
+	BtnOnclick();
+	
+	PengUser=GameRoom.transform:Find("Panel/MJDesk/My_SendMJ");
+	
+end
+
+
+function BtnOnclick()
+	local btn=GameRoom.transform:Find("Panel/my_User/Button/isRead");
+	--给准备按钮添加点击事件
+	CS.EventTriggerListener.Get(btn.gameObject).onClick=function(obj)
+		sendMeState(btn);	
+	end
+	
+	Peng=GameRoom.transform:Find("Panel/Peng");
+	Gang=GameRoom.transform:Find("Panel/Gang");
+    Hu = GameRoom.transform:Find('Panel/Hu');
+    Guo = GameRoom.transform:Find('Panel/Guo');
+    -- 给过按钮添加点击事件
+    CS.EventTriggerListener.Get(Guo.gameObject).onClick = function()
+        isGuo = true;
+        local buffer = ByteBuffer.CreateBufferAndType(8119);
+        buffer:writeInt(1);
+        local play = CS.Player.SharPlayer();
+        local pos =play.Pos;
+        buffer:writeInt(pos);
+        buffer:Send();
+    end
+	--给碰按钮添加点击事件
+	CS.EventTriggerListener.Get(Peng.gameObject).onClick=function(obj)	
+		local bu = ByteBuffer.CreateBufferAndType(8119);	
+		bu:writeInt(2);
+		if(CardNum~=-1)then
+			bu:writeInt(CardNum);
+			bu:Send();
+			CardNum=-1;
+		end
+	end
+	--杠
+	CS.EventTriggerListener.Get(Gang.gameObject).onClick=function(obj)
+		local bu1 = ByteBuffer.CreateBufferAndType(8119);	
+		bu1:writeInt(3);
+		if(CardNum~=-1)then
+			bu1:writeInt(CardNum);
+			bu1:Send();
+			CardNum=-1;
+		end
+	end
+    --给听按钮添加点击事件   待考虑？？？？
+
+
+    -- 给胡按钮添加点击事件
+    CS.EventTriggerListener.Get(Hu.gameObject).onClick = function()
+        local buffer = ByteBuffer.CreateBufferAndType(8119);
+        buffer:writeInt(5);
+        local play = CS.Player.SharPlayer();
+        local pos =play.Pos;
+        buffer:writeInt(pos);
+        buffer:Send();
+    end
+
+	-- 当点击列牌之后，然后在点击桌面的其他位置，那么这张牌会在布局的约束下自动归位？？？
+	local panle=GameRoom.transform:Find("Panel");
+	local myMj=GameRoom.transform:Find("Panel/myMJ_Parent");
+	local myMj1=GameRoom.transform:Find("Panel/MJ_ZiMo");
+	CS.EventTriggerListener.Get(panle.gameObject).onClick=function(obj)
+		myMj:GetComponent("HorizontalLayoutGroup").enabled = true;
+		myMj1:GetComponent("HorizontalLayoutGroup").enabled = true;
+	end
+end
+
+-- 获取到摆好牌的父对象  有待优化，还有右边，下面没有考虑？？？
+function addMJToList()
+	
+	local str="Panel/MJDesk/MJ_BeiMian/";
+	
+	 Left= GameRoom.transform:Find(str.."Left_MJ");
+	 Left1= GameRoom.transform:Find(str.."Left_MJ1");
+	
+	 Top= GameRoom.transform:Find(str.."Top_MJ");
+	 Top1= GameRoom.transform:Find(str.."Top_MJ1");
+	
+end
+
+
+function sendMeState(btn)	
+	if (not ss)
+	then
+		local bu = ByteBuffer.CreateBufferAndType(8006);
+		local tt = btn:GetComponent("Text");
+		if (tt.text=="准备")
+		then
+			bu:writeInt(1);
+			dic[CS.Player.SharPlayer().Pos]:CallLuaFunction("setIsRead",1);
+			tt.text = "取消准备";		
+		else
+			bu:writeInt(-1);
+			dic[CS.Player.SharPlayer().Pos]:CallLuaFunction("setIsRead",-1);
+			tt.text = "准备";
+		end
+		bu:Send();
+		ss = true;
+	end
+end
+
+-- ---------------------***  ---------------  ***---------------------------------
+-- ---------------------***  协议方法调用的方法  ***---------------------------------
+-- ---------------------***  ---------------  ***---------------------------------
+
+
+--显示房间的基础信息（局数、玩法之类的）
+function ListRoomInfo()
+	local str = "";
+	str = roomInfo.gameCount .. "局 ";
+	if (roomInfo.gamePlayer == 1)then str = str.."血战到底 ";
+	elseif(roomInfo.gamePlayer == 2)then str = str.. "血流成河 ";
+	else str = str.."两房牌 ";
+	end
+	str = str..roomInfo.dqHsz .. " ";  -- 可以转换成对应的中文来显示
+
+	str = str..roomInfo.Fs .. "番 ";
+
+	str = str.."房间号: " .. roomInfo.roomId ;
+
+	GameRoom.transform:Find("Panel/Image (5)/roomInfoText"):GetComponent("Text").text=str;
+
+	print("房间信息:"..str);
+end
+
+-- 保存桌子信息以及显示玩家的基础信息
+function DisplayUser()
+	local play = CS.Player.SharPlayer();
+	local myPos = play.Pos;
+	
+	local sss=myPos;
+	
+	--遍历四张桌子   将每张座子保存到指定座位号的dic中（搞定服务器下发位置和自己客户端位置的核心方法）
+	for i = 0, #desk,1 do
+		--保存到字典中，座位号对应桌子号，每次保存完了，我的座位号再加1，把座位号对应起来，就是
+		dic[myPos]=desk[i];
+		
+		myPos=myPos+1;
+		if (myPos >= 4)then 
+			myPos = 0;
+		end
+	end
+
+	--这里保存对应的座位的摆好牌的父对象及其预制体
+	local strZuoWei={};
+	strZuoWei[0]="myMJ_Parent#MaJiang";
+	strZuoWei[1]="leftMJ_Paent#left_mjPrefabs";
+	strZuoWei[2]="topMJ_Parent#top_mjPrefabs";
+	strZuoWei[3]="rightMJ_Parent#right_mjPrefabs";
+	for i = 0, #strZuoWei,1 do
+		ZuoWei[sss]=strZuoWei[i];    -- 将固定好的座位信息保存到对应座位号的ZuoWei表中
+		
+		sss=sss+1;
+		if (sss >= 4)then 
+			sss = 0;
+		end
+	end
+	
+	for j = 1,#roomInfo.GetUsers(),1 do
+		
+		local u=roomInfo.GetUsers()[j];
+		dic[u.pos]:CallLuaFunction("setUName",u.cName);
+		dic[u.pos]:CallLuaFunction("setImage",u.image);
+		dic[u.pos]:CallLuaFunction("setIsRead",u.ready);
+	end
+end
+
+-- 服务器发牌给我方以及显示发牌给其他玩家
+function sendMYMJ()
+	
+	local mjs =Resources.LoadAll("MJImage");
+	
+	for i=0,mjs.Length-1,1 do
+		AllMJImg[mjs[i].name]=mjs[i];
+	end
+	-- 如果自己是庄家那么服务器发牌的时候就会发14张，否则就会发13张
+	for i=1, #MJList,1 do
+		local num=MJList[i];
+		local mj =Resources.Load("MaJiang");	
+		local obj = Object.Instantiate(mj, GameRoom.transform:Find("Panel/myMJ_Parent"));	
+		local type1 = math.modf(num / 10) ;
+		local value = num % 10;
+
+		local card = "p4b" .. type1 .. "_" .. value;
+		local mimage = AllMJImg[card];
+
+		obj.transform:GetComponent("Image").sprite = mimage;
+		obj.transform.gameObject.name=num.."";   -- 给实例化的预制体设置名字
+		
+		--给别人发牌   这里其他玩家都是加载13次，如果其中有庄家，那么加上协议8005中的就是14次了。
+		if(i<=13)then 
+			sendOthersMJ();
+		end
+	end
+end
+function sendOthersMJ()
+	--其他人的牌的预制体，因为要和我们一样一张一张出来，所以同时也加载
+	
+	local lmj = Resources.Load("left_mjPrefabs");
+
+	local tmj = Resources.Load("top_mjPrefabs");
+
+	local rmj = Resources.Load("right_mjPrefabs");
+	
+	--设置父对象
+	
+	Object.Instantiate(lmj).transform:SetParent(GameRoom.transform:Find("Panel/leftMJ_Paent"));
+
+	Object.Instantiate(tmj).transform:SetParent(GameRoom.transform:Find("Panel/topMJ_Parent"));
+
+	Object.Instantiate(rmj).transform:SetParent(GameRoom.transform:Find("Panel/rightMJ_Parent"));
+	s=true;
+
+	--通过循环两次达到减少两个牌（因为现在测试的是两个人组队的）的目的
+	for i=0,1,1 do	
+		ReduceMJ(i);
+	end
+	
+end
+-- 这是针对排好牌的牌堆进行减少的方法，每次发一次牌减少半吨（也就是上下两个牌）  有待优化，还有右边，下面没有考虑？？？
+function ReduceMJ(i)
+			
+	if(Left.childCount>2)
+	then
+		Object.Destroy(Left:GetChild(i).gameObject);
+		Object.Destroy(Left1:GetChild(i).gameObject);	
+	elseif(Left.childCount==1 and s)
+	then
+		s=false;
+		Object.Destroy(Left:GetChild(0).gameObject);
+		Object.Destroy(Left1:GetChild(0).gameObject);		
+	else
+		Object.Destroy(Top:GetChild(i).gameObject);
+		Object.Destroy(Top1:GetChild(i).gameObject);
+	end
+end
+
+
+
+function LeftUser(name)
+	local L=GameRoom.transform:Find("Panel/leftMJ_Paent");
+	PengUser=LeftSend;
+	local LL=L:GetChild(L.childCount-1);  -- 选择列牌中的一个进行移动
+	LL:GetComponent("RectTransform").sizeDelta = CS.UnityEngine.Vector2(70,60);  --设置图片的大小
+	LL:GetComponent("Image").sprite=AllMJImg[name];
+
+	-- 使用了一个可以xlua里面使用Dotween的插件类
+	LL:DOMove(LeftSend.position,0.7):OnComplete(function()
+		LL.transform.parent=LeftSend;	   -- 先移动在设置父对象也行吗？
+	end
+	);
+end
+
+function TopUser(name)
+	local L=GameRoom.transform:Find("Panel/topMJ_Parent");
+	PengUser=TopSend;
+	local LL=L:GetChild(0);
+	LL:GetComponent("RectTransform").sizeDelta = CS.UnityEngine.Vector2(55,70);
+	LL.localScale = CS.UnityEngine.Vector3(1,1,1);
+	LL:GetComponent("Image").sprite=AllMJImg[name];
+	
+	LL:DOMove(TopSend.position,0.7):OnComplete(function()
+		LL.transform.parent=TopSend;	
+	end
+	);
+end
+
+function RightUser(name)
+	local L=GameRoom.transform:Find("Panel/rightMJ_Parent");
+	PengUser=RightSend;
+	local LL=L:GetChild(0);
+	LL:GetComponent("RectTransform").sizeDelta = CS.UnityEngine.Vector2(70,60);
+	LL:GetComponent("Image").sprite=AllMJImg[name];
+	
+	LL:DOMove(RightSend.position,0.7):OnComplete(function()
+		LL.transform.parent=RightSend;	
+	end
+	);
+end
+
+
+--  碰和杠的麻将的添加和销毁
+function PengOrGang(MJNum,Pos,t)
+
+    local gs=string.find(ZuoWei[Pos],"#")-1
+    local Parent=string.sub(ZuoWei[Pos],1,gs)
+
+    local type1 = math.modf(MJNum / 10) ;
+    local value = MJNum % 10;--截取个位数，代表是几（如1是类型的第一张）
+
+    local card;
+
+    if(Parent=="leftMJ_Paent")
+    then
+        card = "p3s" .. type1 .. "_" .. value;
+
+        Object.Destroy(GameRoom.transform:Find("Panel/leftMJ_Paent"):GetChild(0).gameObject);
+        Object.Destroy(GameRoom.transform:Find("Panel/leftMJ_Paent"):GetChild(1).gameObject);
+        if (t<0) then
+            Object.Destroy(GameRoom.transform:Find("Panel/leftMJ_Paent"):GetChild(2).gameObject);
+        end
+        print(">>>>>>>"..PengUser.childCount)
+        Object.Destroy(PengUser:GetChild(PengUser.childCount-1).gameObject);
+
+        MJToPengOrGang(MJNum,card,"LeftPeng_parent","Left_Send",t);
+    elseif(Parent=="topMJ_Parent")
+    then
+        card = "p2s" .. type1 .. "_" .. value;
+
+        Object.Destroy(GameRoom.transform:Find("Panel/topMJ_Parent"):GetChild(0).gameObject);
+        Object.Destroy(GameRoom.transform:Find("Panel/topMJ_Parent"):GetChild(1).gameObject);
+        if (t<0) then
+            Object.Destroy(GameRoom.transform:Find("Panel/topMJ_Parent"):GetChild(2).gameObject);
+        end
+        print(">>>>>>>"..PengUser.childCount)
+        -- 假如一开牌就暗杠的话那么就不能这样的操作，因为此时下面的游戏对象中没有子元素
+        Object.Destroy(PengUser:GetChild(PengUser.childCount-1).gameObject);
+
+        MJToPengOrGang(MJNum,card,"TopPeng_parent","Top_Send",t);
+    elseif(Parent=="rightMJ_Parent")
+    then
+        card = "p1s" .. type1 .. "_" .. value;
+
+        Object.Destroy(GameRoom.transform:Find("Panel/rightMJ_Parent"):GetChild(0).gameObject);
+        Object.Destroy(GameRoom.transform:Find("Panel/rightMJ_Parent"):GetChild(1).gameObject);
+        if (t<0) then
+            Object.Destroy(GameRoom.transform:Find("Panel/rightMJ_Parent"):GetChild(2).gameObject);
+        end
+        print(">>>>>>>penguser.childcount="..PengUser.childCount)
+        Object.Destroy(PengUser:GetChild(PengUser.childCount-1).gameObject);
+
+        MJToPengOrGang(MJNum,card,"RightPeng_parent","Right_Send",t);
+    else
+        card = "p4s" .. type1 .. "_" .. value;
+        local index;
+        for j=1,#MJList,1 do
+            if(MJNum==MJList[j])
+            then
+                index=j;
+            end
+        end
+        Object.Destroy(GameRoom.transform:Find("Panel/myMJ_Parent"):GetChild(index-1).gameObject);
+        Object.Destroy(GameRoom.transform:Find("Panel/myMJ_Parent"):GetChild(index-2).gameObject);
+
+        Object.Destroy(PengUser:GetChild(PengUser.childCount-1).gameObject);
+        --MJList:RemoveAt(index);
+        MJList:RemoveAt(index-1);  -- 循环减少两个
+        MJList:RemoveAt(index-1);
+        -- 如果是杠
+        if (t<0) then
+            Object.Destroy(GameRoom.transform:Find("Panel/myMJ_Parent"):GetChild(index-3).gameObject);
+            MJList:RemoveAt(index-2);
+            -- 如果是一开牌就暗杠（暂时可以根据列牌的数量来判断）
+
+            if (GameRoom.transform:Find('Panel/MJ_ZiMo').childCount~=0) then
+                Object.Destroy(GameRoom.transform:Find("Panel/MJ_ZiMo"):GetChild(0).gameObject);
+            end
+
+
+
+        end
+        MJToPengOrGang(MJNum,card,"MyPeng_parent","My_Peng",t);
+
+
+    end
+end
+-- 在碰牌区域添加牌
+function MJToPengOrGang(gangPai,name,parent,YuZhiTi,t)
+
+    local L=GameRoom.transform:Find("Panel/MJDesk/"..parent);
+    local lmj = Resources.Load(YuZhiTi);
+    -- 循环加载3次
+    for i = 1, 3,1 do
+        Object.Instantiate(lmj).transform:SetParent(L);
+        print('>>>>>>>>>>>>childCount = '..L.childCount);
+        L:GetChild(L.childCount-1):GetComponent("Image").sprite=AllMJImg[name];
+    end
+
+
+    --L:GetChild(L.childCount-1):GetComponent("Image").sprite=AllMJImg[name];
+    --L:GetChild(L.childCount-2):GetComponent("Image").sprite=AllMJImg[name];
+    --L:GetChild(L.childCount-3):GetComponent("Image").sprite=AllMJImg[name];
+
+    --杠（明杠和暗杠）
+    if(t<0)then
+        Object.Instantiate(lmj).transform:SetParent(L);
+        L:GetChild(L.childCount-1):GetComponent("Image").sprite=AllMJImg[name];
+        -- 我方暗杠的判断操作
+
+        if (GameRoom.transform:Find('Panel/MJ_ZiMo').childCount~=0) then
+            Object.Instantiate(lmj).transform:SetParent(L);
+            L:GetChild(L.childCount-1):GetComponent("Image").sprite=AllMJImg[name];
+        end
+
+        -- 这种方案考虑太繁杂了  因为如果杠之后摸牌区域内还有牌的话，那么就说明是暗杠
+        --[[
+        if (GameRoom.transform:Find("Panel/MJ_ZiMo").childCount~=0) then
+            local moPai = GameRoom.transform:Find("Panel/MJ_ZiMo"):GetChild(0).transform.gameObject.name;
+            print('>>>>> mopai='..moPai);
+            if (gangPai==moPai) then
+                Object.Instantiate(lmj).transform:SetParent(L);
+                L:GetChild(L.childCount-1):GetComponent("Image").sprite=AllMJImg[name];
+            end
+        end
+        --]]
+        
+    end
+end
+
+-- 判断是否可以胡牌(暂时就考虑了自摸的情况)
+function JudgeHu(_mopai)
+    -- 判断胡牌
+    local isHu = CS.LuaCallUnity.IsCanHU(MJList,_mopai);
+
+    if (isHu) then
+        print('>>>>>>>>>>>>>>>>>>>  胡了')
+        Hu:GetComponent("Image").gameObject:SetActive(true);
+    end
+
+end
+
+-- 这个方法本来是用来测试杠碰胡等操作，虽然这样篡改服务器下发的数据，但是服务器上没有记录这样是数据，所以就检测不到碰杠胡
+function lixianceshi()
+    lixianMj1 = {11,11,12,12,13,13,13,22,23,24,33,33,33,34}
+    lixianMj2 = {11,11,12,12,13,13,13,22,23,24,33,33,33}
+    if (ZhuangjiaName==CS.Player.SharPlayer().UName) then
+        for i = 1, 14 do
+            MJList:addValue(lixianMj1[i])
+        end
+    else
+        for i = 1, 13 do
+            MJList:addValue(lixianMj2[i])
+        end
+    end
+end
+
+
+
+
+-- ---------------------***  -------  ***---------------------------------
+-- ---------------------***  协议方法  ***---------------------------------
+-- ---------------------***  -------  ***---------------------------------
+
+--玩家一开始加入房间时，服务器把房间内的所有的信息发送下来
+GameRoom.do7000=function(buffer)
+	print("收到7000");
+
+	local jsonstr=buffer:readString();
+
+	local json=JsonData.Parse(jsonstr);
+
+	roomInfo.roomId = json:getInt("roomId");
+	roomInfo.gameCount = json:getInt("js");
+	roomInfo.gamePlayer = json:getInt("wf");
+	roomInfo.dqHsz = json:getString("dqhsz");
+	roomInfo.Fs = json:getInt("fs");
+
+	--取房间所有玩家
+	local users=json:getArray("users");
+	if(users~=nil)
+	then
+		for i=0,users.Length-1,1 do
+			local userJson=users[i];
+			local name=userJson:getString("userName");
+			local chinaName=userJson:getString("userChinaName");
+			local deskPos=userJson:getInt("deskPos");
+			local imgUrl=userJson:getString("imgUrl");
+			local ready=userJson:getInt("ready");
+
+			if (name==CS.Player.SharPlayer().UName)
+			then
+				CS.Player.SharPlayer().Pos = deskPos;
+				print("我的位置 ：" .. deskPos,name);
+			end
+			local us=User:New(name,chinaName,imgUrl,ready,deskPos);
+			roomInfo.addUser(us);
+		end
+	end
+	ListRoomInfo();
+	DisplayUser();
+end
+
+
+--某个玩家进入房间，服务器向每个玩家发送消息（自己一开始进入房间会执行两个协议）
+GameRoom.do7001=function(buffer)
+	local uName = buffer:readString();
+	local cName = buffer:readString();
+	local Pso = buffer:readInt();
+	local uImage = buffer:readString();
+	local ready = buffer:readInt();
+
+
+	--因为之前我们已经保存过自己了，所以如果事自己就直接返回
+	if (uName==CS.Player.SharPlayer().UName)then 
+		return;
+	end
+
+	local us = User:New(uName,cName,uImage,ready,Pso);
+
+	roomInfo.addUser(us);
+	dic[Pso]:CallLuaFunction("setImage",uImage);
+	dic[Pso]:CallLuaFunction("setUName",cName);
+	dic[Pso]:CallLuaFunction("setIsRead",ready);
+end
+
+--玩家退出房间
+GameRoom.do7999=function(buffer)
+	local uName = buffer:readString();
+	local Pso = buffer:readInt();
+	print("离开人姓名：" .. uName .. "     座位号：" .. Pso);
+	dic[Pso]:CallLuaFunction("setImage","");
+	dic[Pso]:CallLuaFunction("setUName","");
+	dic[Pso]:CallLuaFunction("setIsRead",0);
+	dic[Pso]:CallLuaFunction("setZhuangJia",false);
+	roomInfo.removeUser(uName);
+end
+
+--确定庄家，及其信息
+GameRoom.do8005=function(buffer)
+	local uName = buffer:readString();
+	ZhuangjiaName = uName;
+	local Pso = buffer:readInt();	
+	dic[Pso]:CallLuaFunction("setZhuangJia",true);
+
+	-- 这里只加载一次列牌的预制体的原因是，后面发牌显示那里有加载13次，然后庄家加上这一次就是14次
+	if(uName~=CS.Player.SharPlayer().UName)
+	then
+		local gs=string.find(ZuoWei[Pso],"#")-1
+		
+		local Parent=string.sub(ZuoWei[Pso],1,gs)
+		
+		local YuZhiTi=string.sub(ZuoWei[Pso],gs+2);
+			
+		local lmj = Resources.Load(YuZhiTi);
+		
+		Object.Instantiate(lmj).transform:SetParent(GameRoom.transform:Find("Panel/"..Parent));
+	end
+end
+
+
+--玩家准备或者取消协议
+GameRoom.do8006=function(buffer)
+	local uName = buffer:readString();
+	local isRead = buffer:readInt();
+	local Pos = buffer:readInt();
+
+	if(uName==CS.Player.SharPlayer().UName)then  ss = false; end
+
+	dic[Pos]:CallLuaFunction("setIsRead",isRead);
+end
+
+--四个人准备好了，然后开始游戏
+GameRoom.do8110=function(buffer)
+	print("游戏开始");
+	-- 当准备好游戏开始之后，准备和取消按钮就可以消失了
+	GameRoom.transform:Find("Panel/my_User/Button").gameObject:SetActive(false);
+end
+
+--服务器一开始发牌
+GameRoom.do8112=function(buffer)
+	while (buffer.Available > 0)   -- 判断是否buffer里面还有数据可以读取
+	do
+		MJList:addValue(buffer:readInt());
+	end
+	MJList:Sort();
+	sendMYMJ();
+end
+
+-- 轮到摸牌，服务器发张牌给我方
+GameRoom.do8113=function(buffer)
+    if isGuo then
+        Gang:GetComponent("Image").gameObject:SetActive(false);
+        Peng:GetComponent("Image").gameObject:SetActive(false);
+        Guo:GetComponent('Image').gameObject:SetActive(false);
+        isGuo = false;
+    end
+	local MJNum = buffer:readInt();
+
+	local mj =Resources.Load("MaJiang");	
+	local obj = Object.Instantiate(mj, GameRoom.transform:Find("Panel/MJ_ZiMo"));--获取加载摸到的牌到摸牌区
+	local type1 = math.modf(MJNum / 10) ;
+	local value = MJNum % 10;
+
+	local card = "p4b" .. type1 .. "_" .. value;
+	local mimage = AllMJImg[card];
+	obj.transform.name=MJNum;   -- 设置摸牌的名字，后期有用
+	obj.transform:GetComponent("Image").sprite = mimage;
+
+    JudgeHu(MJNum);
+	
+end
+
+--等待玩家打牌的时间
+GameRoom.do8114=function(buffer)
+	local tim = buffer:readInt();
+	local Pso = buffer:readInt();
+	GameRoom.transform:Find("Panel/Image (5)/Image/Text"):GetComponent("Text").text=tostring(tim);
+	dic[Pso]:CallLuaFunction("setJianTou",true);	
+end
+
+--玩家打的是什么牌(自己打的牌也会发下来)
+GameRoom.do8116=function(buffer)
+	local Pso = buffer:readInt();
+	local uName = buffer:readString();
+	local MJNum = buffer:readInt();
+	local type1 = math.modf(MJNum / 10) ;
+	local value = MJNum % 10;--截取个位数，代表是几（如1是类型的第一张）
+	dic[Pso]:CallLuaFunction("setJianTou",false);
+	if(uName~=CS.Player.SharPlayer().UName)
+	then	
+		local gs=string.find(ZuoWei[Pso],"#")-1
+		
+		local Parent=string.sub(ZuoWei[Pso],1,gs)
+		
+		local YuZhiTi=string.sub(ZuoWei[Pso],gs+2);
+		
+		local lmj = Resources.Load(YuZhiTi);
+
+        -- 增加列牌的牌（这里是先打出去，后增加的方式）
+		Object.Instantiate(lmj).transform:SetParent(GameRoom.transform:Find("Panel/"..Parent));
+		
+		local card;
+		
+		if(Parent=="leftMJ_Paent")
+		then
+			card = "p3s" .. type1 .. "_" .. value;--拼接成p4b1_1这种类型，才可以找到,p4b代表是我方的牌
+			
+			LeftUser(card);		
+		elseif(Parent=="topMJ_Parent")
+		then
+			card = "p2s" .. type1 .. "_" .. value;
+			TopUser(card);	
+		else
+			card = "p1s" .. type1 .. "_" .. value;	
+			RightUser(card);
+		end	
+	else
+		MJList:Remove(MJNum);
+        PengUser=GameRoom.transform:Find("Panel/MJDesk/My_SendMJ");
+		-- 打出牌之后然后在来判断是否摸牌区域还有牌，以及对它其中的牌的处理方法
+		local index=0;
+		-- 如果在摸牌区打掉了那张牌，那么牌的父对象会改变，因此之前父对象的子节点就会为空
+		if(GameRoom.transform:Find("Panel/MJ_ZiMo").childCount~=0)
+		then
+            -- 是通过获取游戏对象的名字  间接的得到它那张牌的编号
+			local k= tonumber(GameRoom.transform:Find("Panel/MJ_ZiMo"):GetChild(0).name);
+			--对摸到的牌进行排序
+			for j=1,#MJList,1 do
+				if(k>=MJList[j])
+				then
+					index=j;
+				end
+			end
+			--MJList:addValue(k);
+			MJList:addAt(index+1,k);			
+			Object.Destroy(GameRoom.transform:Find("Panel/MJ_ZiMo"):GetChild(0).gameObject);
+			
+			Object.Instantiate(Resources.Load("MaJiang"), GameRoom.transform:Find("Panel/myMJ_Parent"));	
+			for i=1, #MJList,1 do
+				local num=MJList[i];
+				local type1 = math.modf(num / 10) ;
+				local value = num % 10;
+				local card = "p4b" .. type1 .. "_" .. value;
+				local mimage = AllMJImg[card];
+				
+				local MM=GameRoom.transform:Find("Panel/myMJ_Parent");
+				-- 这里是重新加载我方列牌的，达到更新的目的
+				if(mimage~=nil)then
+					MM:GetChild(i-1).transform:GetComponent("Image").sprite = mimage;	
+				end
+			end	
+		end		
+	end
+end
+
+
+--碰牌的接收的协议号
+GameRoom.do8120=function(buffer)--询问是否碰
+	local MJNum = buffer:readInt();
+	CardNum=MJNum;
+	Peng:GetComponent("Image").gameObject:SetActive(true);
+    Guo:GetComponent('Image').gameObject:SetActive(true);
+	print(MJNum,"碰");
+end
+
+--明杠牌接收的协议号
+GameRoom.do8121=function(buffer)--杠
+	local MJNum = buffer:readInt();
+	CardNum=MJNum;
+	Gang:GetComponent("Image").gameObject:SetActive(true);
+	Peng:GetComponent("Image").gameObject:SetActive(true);
+    Guo:GetComponent('Image').gameObject:SetActive(true);
+	print(MJNum,"杠");
+end
+
+--听牌接收的协议号   暂时不写？？？
+GameRoom.do8123=function(buffer)  --听
+	local MJNum = buffer:readInt();
+	local Pos= buffer:readInt();
+	local uName = buffer:readString();
+
+	print(MJNum,"听牌");
+
+end
+
+--暗杠牌接收的协议号
+GameRoom.do8125 = function(buffer)
+	local MJNum = buffer:readInt()
+	CardNum = MJNum;
+	Gang:GetComponent('Image').gameObject:SetActive(true);
+    Guo:GetComponent('Image').gameObject:SetActive(true);
+	print(MJNum,"暗杠");
+end
+
+--碰后所有玩家显示信息
+GameRoom.do8127=function(buffer)--碰显示
+	Peng:GetComponent("Image").gameObject:SetActive(false);   -- 别人碰杠胡的字不用显示在其对应的位置上
+    Gang:GetComponent("Image").gameObject:SetActive(false);
+    Guo:GetComponent('Image').gameObject:SetActive(false);
+	local MJNum = buffer:readInt();
+	local Pos= buffer:readInt();
+	local uName = buffer:readString();
+	print("碰",MJNum,Pos,uName);
+	PengOrGang(MJNum,Pos,1)  -- 碰传递的是1
+end
+
+
+--杠后所有玩家显示信息
+GameRoom.do8128=function(buffer)--杠
+	Gang:GetComponent("Image").gameObject:SetActive(false);
+	Peng:GetComponent("Image").gameObject:SetActive(false);
+    Guo:GetComponent('Image').gameObject:SetActive(false);
+	local MJNum = buffer:readInt();
+	local Pos= buffer:readInt();
+	local uName = buffer:readString();
+	print("杠",MJNum,Pos,uName);
+	PengOrGang(MJNum,Pos,-1)   -- 杠传递的是-1
+end
+
+
+
+
+
+
+
+

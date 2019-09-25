@@ -1,0 +1,38 @@
+local Application=CS.UnityEngine.Application;
+
+DeskNode={};
+local this = DeskNode;
+
+local uName = nil;
+local cName = nil;
+local image = nil;
+local isRead = 0;
+
+this.UName=function()
+	return uName;
+end
+
+this.setUName=function(Name)
+	uName = Name;
+	this.transform:Find("Text"):GetComponent("Text").text = Name;
+	--DeskNode.transform:Find("Text"):GetComponent("Text").name=Name;
+end
+this.setIsRead=function(ready)
+	isRead = ready;
+	local s = true;
+	if (ready > 0) then s = false;
+	elseif(ready<0) then s = true; end
+	this.transform:Find("readImg"):GetComponent("Image").gameObject:SetActive(s);
+end
+this.setImage=function(img)
+	if (img == "") then img = "file://" .. Application.dataPath .. "/GameRoom/img/aa.png"; end
+	image = img;
+	this.transform:GetComponent("DownImage"):loadImage(img);
+end
+this.setZhuangJia=function(value)
+	this.transform:Find("Zhuang"):GetComponent("Image").gameObject:SetActive(value);
+end  
+
+this.setJianTou=function(value)
+	this.transform:Find("Image"):GetComponent("Image").gameObject:SetActive(value);
+end

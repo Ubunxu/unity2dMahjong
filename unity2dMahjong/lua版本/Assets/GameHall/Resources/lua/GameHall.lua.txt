@@ -1,0 +1,73 @@
+
+
+GameHall={};
+
+
+GameHall.Start=function()
+	CS.util.core.EventDispatch.addLuaEventListener(GameHall);
+	ListUserInfo();
+	createRoom();
+	addroom();
+	
+end
+
+function ListUserInfo()
+	local play = CS.Player.SharPlayer();
+	GameHall.transform:Find("Panel/img_Yezi_top/img_Yezi/text_Name"):GetComponent("Text").text = play.CName;
+    GameHall.transform:Find("Panel/img_Yezi_top/img_Yezi/img_Que/img_Gold/text_Gold"):GetComponent("Text").text = play.Money.."";
+    GameHall.transform:Find("Panel/img_Yezi_top/img_Yezi/img_Que/but_UserKK/img_yellow/img_TouXiang"):GetComponent("DownImage"):loadImage(play.Image);
+end
+
+
+
+function addroom()
+	CS.EventTriggerListener.Get(GameHall.transform:Find("Panel/img_left_RoomKK/But_addRoom").gameObject).onClick=function(obj)
+
+		local ab = CS.UnityEngine.AssetBundle.LoadFromFile(CS.UnityEngine.Application.persistentDataPath.."/GameHall/assetbundle/addroom_andriond.assetbundle");
+		local luapath = "file://"..CS.UnityEngine.Application.persistentDataPath..'/GameHall/Resources/lua/AddRoom.lua.txt';
+		print('luapath>>>>>>>>'..luapath);
+		local obj =ab:LoadAsset('AddRoom');
+
+		local addroomObj = CS.UnityEngine.Object.Instantiate(obj,GameHall.transform,false);
+		CS.util.LoadFactory.LoadAssetText(luapath,GameHall.self,function (_obj,_bytes)
+			local luarun = addroomObj:AddComponent(typeof(CS.LuaRun));
+			print('>>>>>>>>'.._obj);
+			luarun.luaString = _obj;
+			luarun.luaName = 'AddRoom';
+			print("------------------------");
+		end,false);
+
+		ab:Unload(false);
+		print("加入房间");
+	end
+end
+
+function createRoom()
+	CS.EventTriggerListener.Get(GameHall.transform:Find("Panel/img_left_RoomKK/But_FoundRoom").gameObject).onClick=function(obj)
+
+		local ab = CS.UnityEngine.AssetBundle.LoadFromFile(CS.UnityEngine.Application.persistentDataPath..'/GameHall/assetbundle/createroom_andriond.assetbundle');
+		local luapath = "file://"..CS.UnityEngine.Application.persistentDataPath..'/GameHall/Resources/lua/CreateRoom.lua.txt';
+
+		local obj =ab:LoadAsset('CreateRoom');
+		local createRoomObj = CS.UnityEngine.Object.Instantiate(obj,GameHall.transform,false);
+		CS.util.LoadFactory.LoadAssetText(luapath,GameHall.self,function (_obj,_bytes)
+			local luarun = createRoomObj:AddComponent(typeof(CS.LuaRun));
+			luarun.luaString = _obj;
+			luarun.luaName = 'CreateRoom';
+		end,false);
+
+		ab:Unload(false);
+		print("创建房间");
+	end
+end
+
+--表示加入房间成功，在此处应阻止消息读取，但不阻止接收
+GameHall.do7901=function(bytebuffer)
+
+	local socket= CS.util.net.U3DSocket.shareSocket();
+	socket:StopRead();
+	--销毁7901
+	CS.util.core.EventDispatch.Remove(7901);
+	
+	CS.UnityEngine.SceneManagement.SceneManager.LoadScene("gameRoom");
+end

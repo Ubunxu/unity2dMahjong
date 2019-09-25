@@ -1,0 +1,46 @@
+local Http = CS.util.Http;
+local JsonData = CS.util.JsonDataLua;
+local EncryptDecrypt = CS.util.net.EncryptDecrypt;
+
+Login = {};
+Login.Awake = function()
+    Login.onClickListener();
+end
+
+Login.Start = function()
+    CS.EventTriggerListener.Get(Login.self.gameObject).onClick = function(obj)
+        Http.doGet(CS.util.net.IP.HttpServer .. "?type=1001&userName=xujy&password=123456", Login.self, function(str)
+            str = string.sub(str, 4);
+            print("解密前:", str);
+            str = EncryptDecrypt.DecryptString(str);
+            print("解密后:", str);
+            local json = JsonData.Parse(str)
+            local flg = json:getString("flg");
+            if (flg == "ok")
+            then
+                print("登录成功!");
+                local play = CS.Player.SharPlayer();
+                play.UName = json:getString("userName");
+                play.CName = json:getString("chinaName");
+                play.Money = json:getInt("money");
+                play.Image = json:getString("imgUrl");
+
+                local p = json:getString("hashCodePasword");
+                EncryptDecrypt.EncryptDecryptKey = p;
+                print("钥匙为：", p);
+                CS.UnityEngine.SceneManagement.SceneManager.LoadScene("gameHall");
+            else
+                print(flg);
+            end
+        end)
+    end
+end
+
+Login.onClickListener = function()
+
+    CS.EventTriggerListener.Get(CS.UnityEngine.GameObject.Find("Panel/Image/btn_exit").gameObject).onClick = function()
+        CS.util.Http.doGet(CS.util.net.IP.HttpServer..'?type=1000&userName=xujy',Login.self);
+        print('退出登录');
+    end
+
+end
